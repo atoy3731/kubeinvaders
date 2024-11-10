@@ -1,19 +1,24 @@
 FROM nginx:stable
 
-# Update repo and install some utilities and prerequisites
-RUN apt-get update -y
-RUN apt-get -y install wget at procps gnupg ca-certificates jq openssl task-spooler apt-transport-https python3 python3-pip redis libssl-dev  python3-yaml python3-kubernetes python3-redis python3-requests
+ARG TARGETARCH
 
-# Install kubectl
-RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
-RUN chmod +x ./kubectl
-RUN mv ./kubectl /usr/local/bin/kubectl
+# # Update repo and install some utilities and prerequisites
+# RUN apt-get update -y
+# RUN apt-get -y install wget at procps gnupg ca-certificates jq openssl task-spooler apt-transport-https python3 python3-pip redis libssl-dev  python3-yaml python3-kubernetes python3-redis python3-requests
+
+# # Install kubectl
+# RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$TARGETARCH/kubectl"
+# RUN chmod +x ./kubectl
+# RUN mv ./kubectl /usr/local/bin/kubectl
 
 # Install Openresty
-RUN wget -O - https://openresty.org/package/pubkey.gpg | apt-key add -
-RUN codename=`grep -Po 'VERSION="[0-9]+ \(\K[^)]+' /etc/os-release` && echo "deb http://openresty.org/package/debian $codename openresty" | tee /etc/apt/sources.list.d/openresty.list
-RUN apt-get update -y
-RUN apt-get -y install openresty
+RUN curl -o /etc/apt/trusted.gpg.d/openresty.asc https://openresty.org/package/pubkey.gpg && \
+    codename=`grep -Po 'VERSION="[0-9]+ \(\K[^)]+' /etc/os-release` && \
+    if [ "$TARGETARCH" = "arm64" ]; then DEBPKG=http://openresty.org/package/$TARGETARCH/debian; else DEBPKG=http://openresty.org/package/debian; fi && \
+    echo "deb $DEBPKG $codename openresty" | tee /etc/apt/sources.list.d/openresty.list && \
+    cat /etc/apt/sources.list.d/openresty.list
+RUN apt-get update && \
+    apt-get -y install openresty
 RUN chmod 777 /usr/local/openresty/nginx
 
 # Install LUA Module
@@ -23,9 +28,9 @@ RUN apt-get update --fix-missing
 RUN for pkg in luasec lunajson lyaml; do luarocks install $pkg; done
 
 # Install kube-linter
-RUN curl -L -O https://github.com/stackrox/kube-linter/releases/download/0.6.0/kube-linter-linux.tar.gz
-RUN tar -xvf kube-linter-linux.tar.gz && rm -f kube-linter-linux.tar.gz
-RUN cp kube-linter /usr/local/bin/ && chmod 775 /usr/local/bin/kube-linter
+RUN if [ "$TARGETARCH" = "arm64" ]; then KLPKG=https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux_arm64; else KLPKG=https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux; fi && \
+    curl -L -o /usr/local/bin/kube-linter $KLPKG
+RUN chmod 775 /usr/local/bin/kube-linter
 RUN mkdir /tmp/kube-linter-pods && chmod 777 /tmp/kube-linter-pods
 
 # Installl parser script for kubelinter
@@ -74,3 +79,4 @@ RUN chmod a+rwx ./entrypoint.sh
 RUN apt clean && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/entrypoint.sh"]
+
