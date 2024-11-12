@@ -2,14 +2,14 @@ FROM nginx:stable
 
 ARG TARGETARCH
 
-# # Update repo and install some utilities and prerequisites
-# RUN apt-get update -y
-# RUN apt-get -y install wget at procps gnupg ca-certificates jq openssl task-spooler apt-transport-https python3 python3-pip redis libssl-dev  python3-yaml python3-kubernetes python3-redis python3-requests
+# Update repo and install some utilities and prerequisites
+RUN apt-get update -y
+RUN apt-get -y install wget at procps gnupg ca-certificates jq openssl task-spooler apt-transport-https python3 python3-pip redis libssl-dev  python3-yaml python3-kubernetes python3-redis python3-requests
 
-# # Install kubectl
-# RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$TARGETARCH/kubectl"
-# RUN chmod +x ./kubectl
-# RUN mv ./kubectl /usr/local/bin/kubectl
+# Install kubectl
+RUN curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/$TARGETARCH/kubectl"
+RUN chmod +x ./kubectl
+RUN mv ./kubectl /usr/local/bin/kubectl
 
 # Install Openresty
 RUN curl -o /etc/apt/trusted.gpg.d/openresty.asc https://openresty.org/package/pubkey.gpg && \
